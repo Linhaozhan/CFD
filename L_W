@@ -1,0 +1,24 @@
+import numpy as np
+
+#parameter
+nx = 1001
+nt = 100
+dx = 1/(nx-1)
+dt = dx*0.8
+cfl = dt/dx
+#int
+u = np.zeros(nx)
+for i in range(nx):
+    if((i>=299 and i<=699)):
+        u[i] = 1
+
+un = u.copy()
+#calculate
+for n in range(nt):
+    u = un.copy()
+    for i in range(nx-1):
+        un[i] = 0.5*cfl*(cfl-1)*u[i-1]+(1-cfl*cfl)*u[i]+0.5*cfl*(cfl+1)*u[i+1]
+    un[-1] = un[999]
+    un[0] = un[1000]
+
+np.savetxt('l_w_u',un)
