@@ -1,0 +1,46 @@
+import numpy as np
+
+#parameter
+nx = 1001
+a = 1
+nt = 125000
+dx = 1/(nx-1)
+dt = dx*0.8
+cfl = a*dt/dx
+#int
+u = np.zeros(nx)
+f = np.zeros(nx)
+for i in range(nx):
+    if((i>=299 and i<=699)):
+        u[i] = 1
+
+un = u.copy()
+#calculate
+for n in range(nt):
+    u = un.copy()
+    for i in range(nx-1):
+        deltafr = u[i] - u[i-1]
+        deltala = u[i+1] - u[i]
+        if deltala == 0:
+            if deltafr == 0:
+                r = 1
+            if deltafr < 0:
+                r = 0
+            else:
+                r = 100000
+        else:
+            r = deltafr / deltala
+        # limiter
+        if r <= 0:
+            fr = 0
+        else:
+            fr =3*r/(1+2*r)
+        # flux
+        f[i] = a*u[i]+0.5*a*(dx-a*dt)*fr*(u[i+1]-u[i])/dx
+        # iteration
+        un[i] = u[i] + cfl*(f[i-1]-f[i])
+    #cycle
+    un[-1] = un[999]
+    un[0] = un[1000]
+
+np.savetxt('slope_limiter100T.dat',un)
