@@ -1,0 +1,142 @@
+import numpy as np
+#Introduce field constants
+gamma = 1.4
+CFL = 0.9
+M = 100
+dx = 0.01
+T = 0
+#Introduce field variables
+#Define density as rho
+rho = np.zeros(M)
+rhol = np.zeros(M)
+rhor = np.zeros(M)
+#Define velocity as v
+u = np.zeros(M)
+ul = np.zeros(M)
+ur = np.zeros(M)
+#Denfine pressure as p
+p = np.zeros(M)
+pl = np.zeros(M)
+pr = np.zeros(M)
+#Denfine internal energy as e
+e = np.zeros(M)
+el = np.zeros(M)
+er = np.zeros(M)
+#Denfine total energy as E
+E = np.zeros(M)
+El = np.zeros(M)
+Er = np.zeros(M)
+#Denfine entropy as H
+H = np.zeros(M)
+Hl = np.zeros(M)
+Hr = np.zeros(M)
+#Denfine slope limiter as fr
+fr = np.zeros((M,3))
+#Denfine field variables vector as U
+U = np.zeros((M,3))
+Ul = np.zeros((M,3))
+Ur = np.zeros((M,3))
+#Denfine flux vector as F
+F = np.zeros((M,3))
+Fl = np.zeros((3,1))
+Fr = np.zeros((3,1))
+#Denfine eigenvalue as lamda
+lamda = np.zeros((3,1))
+#Denfine the amplitude of wave as alpha
+alpha = np.zeros((3,1))
+#Denfine the eigen vector as K
+K = np.zeros((3,3))
+#Initial conditions
+#Left
+for i in range(int(0.3*M)):
+    rho[i] = 1
+    u[i] = 0.75
+    p[i] = 1
+    e[i] = p[i]/(gamma-1)/rho[i]
+    E[i] = e[i]+u[i]**2/2
+    p[i] = (gamma-1)*(E[i]-u[i]**2/2)*rho[i]
+    H[i] = E[i]+p[i]/rho[i]
+    U[i,:] = [rho[i],rho[i]*u[i],rho[i]*E[i]]
+
+#Right
+for i in range(int(0.3*M),M):
+    rho[i] = 0.125
+    u[i] = 0
+    p[i] = 0.1
+    e[i] = p[i]/(gamma-1)/rho[i]
+    E[i] = e[i]+u[i]**2/2
+    p[i] = (gamma-1)*(E[i]-u[i]**2/2)*rho[i]
+    H[i] = E[i]+p[i]/rho[i]
+    U[i,:] = [rho[i],rho[i]*u[i],rho[i]*E[i]]
+    UN = U.copy()
+#restructure
+for t in range(80):
+    if T > 0.2:
+        break
+    for i in range(1,M-1):
+        for j in range(3):
+            deltafr = U[i,j]-U[i-1,j]
+            deltala = U[i+1,j]-U[i,j]
+            if deltala == 0:
+                if deltafr == 0:
+                   r = 1
+                if deltafr < 0:
+                    r = 0
+                else:
+                    r = 100000
+            else:
+                r = deltafr / deltala
+            #slope limiter
+            if r <= 0:
+                fr[i,j] = 0
+            else:
+                fr[i,j] = 3*r / (1+2*r)
+    #print(fr)
+    for j in range(99, 29, -1):
+        if rho[j] == rho[j-1]:
+            F[j,:] = [rho[j]*u[j],rho[j]*(u[j])**2 +p[j],rho[j]*u[j]*H[j]]
+        else:
+            rhol = U[j-1,0]+fr[j-1,0]*dx/2
+            rhor = U[j,0]-fr[j,0]*dx/2
+            ul = (U[j-1,1]+fr[j-1,0]*dx/2)/rhol
+            ur = (U[j,1]-fr[j,0]*dx/2)/rhor
+            El = (U[j-1,2]+fr[j-1,0]*dx/2)/rhol
+            Er = (U[j,2]-fr[j,0]*dx/2)/rhor
+            pl = rhol*(gamma-1)*(El-ul**2/2)
+            pr = rhor*(gamma-1)*(Er-ur**2/2)
+            Hl = El+pl/rhol
+            Hr = Er+pr/rhor
+            u_avg = (np.sqrt(rhol)*ul+np.sqrt(rhor)*ur)/(np.sqrt(rhol)+np.sqrt(rhor))
+            H_avg = (np.sqrt(rhol)*Hl+np.sqrt(rhor)*Hr)/(np.sqrt(rhol)+np.sqrt(rhor))
+            a_avg = np.sqrt((gamma-1)*(H_avg-0.5*u_avg**2))
+            lamda[0] = u_avg-a_avg
+            lamda[1] = u_avg
+            lamda[2] = u_avg+a_avg
+            lamda_max = np.max(lamda)
+            #print(lamda_max)
+            K[:,0] = [1,u_avg-a_avg,H_avg-u_avg*a_avg]
+            K[:,1] = [1,u_avg,0.5*u_avg**2]
+            K[:,2] = [1,u_avg+a_avg,H_avg+u_avg*a_avg]
+            alpha[1] = (gamma-1)/a_avg**2*((rhor-rhol)*(H_avg-u_avg**2)+u_avg*(rhor*ur-rhol*ul)-(rhor*Er-rhol*El))
+            alpha[0] = 0.5/a_avg*((rhor-rhol)*(u_avg+a_avg)-(rhor*ur-rhol*ul)-a_avg*alpha[1])
+            alpha[2] = (rhor-rhol)-(alpha[0]+alpha[1])
+            Fl = [rho[j-1]*u[j-1], rho[j-1]*u[j-1]**2+p[j-1], rho[j-1]*u[j-1]*H[j-1]]
+            Fr = [rho[j]*u[j],rho[j]*u[j]**2+p[j],rho[j]*u[j]*H[j]]
+            F[j,:] = 0.5*(np.reshape(Fl,(1,3))+np.reshape(Fr,(1,3)))-0.5*(alpha[0]*abs(lamda[0])*K[:,0]+alpha[1]*abs(lamda[1])*K[:,1]+alpha[2]*abs(lamda[2])*K[:,2])
+            UN[j,:] = U[j,:]-CFL/abs(lamda_max)*(F[j+1,:]-F[j,:])
+    dt = (0.9*dx)/lamda_max
+    T = T+dt
+    U = UN.copy()
+    for j in range(M-1):
+        u[j] = U[j,1]/U[j,0]
+        rho[j] = U[j,0]
+        E[j] = U[j,2]/U[j,0]
+        p[j] = rho[j]*(gamma-1)*(E[j]-u[j]**2/2)
+        H[j] = E[j]+p[j]/rho[j]
+x_axis = np.arange(0,1,0.01)
+#print(x_axis)
+result = np.column_stack((x_axis,rho,u,p))
+Or = np.loadtxt('Original_result.txt')
+final = np.column_stack((result,Or))
+#print(final)
+np.savetxt('final_data.dat',final)
