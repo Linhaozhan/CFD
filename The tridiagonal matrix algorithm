@@ -1,0 +1,30 @@
+import numpy as np
+#Define al as the down secondary diagonal line
+#Define ac as the main diagonal line
+#Define ar as the up secondary diagonal line
+#Define b as the constant
+def TDMA(al,ac,ar,b):
+    rank = len(ac) #Print the rank of A by the number of main diagonal line
+    all, acl, arl, bl = map(np.array, (al, ac, ar, b))# array list
+    for i in range(1, rank):
+#        mc = all[i - 1] / acl[i - 1]
+#        acl[i] = acl[i] - mc * arl[i - 1]
+#        bl[i] = bl[i] - mc * bl[i - 1]
+        acl[i] = acl[i] - all[i-1]*arl[i-1]/acl[i-1]
+        bl[i] = bl[i] - all[i-1]*arl[i-1]/acl[i-1]
+    xl = np.zeros(rank)
+    xl[rank-1] = bl[rank-1]/acl[rank-1]
+
+    for j in range(rank-2,-1,-1):
+        xl[j] = (bl[j]-arl[j]*xl[j+1])/acl[j]
+
+    return xl
+#Example
+#al = np.array([3.,1,3])
+#ac = np.array([10.,10.,7.,4.])
+#ar = np.array([2.,4.,5.])
+b = np.array([3,4,5,6.,])
+A = np.array([[10,2,0,1],[3,10,4,0],[0,1,7,5],[3,0,3,4]],dtype=float)
+#print(TDMA(al,ac,ar,b))
+print(np.linalg.solve(A, b))
+
