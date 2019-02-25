@@ -1,0 +1,87 @@
+import numpy as np
+import time
+start =time.clock()
+#Define al as the down secondary diagonal line
+#Define ac as the main diagonal line
+#Define ar as the up secondary diagonal line
+#Define b as the constant
+def TDMA(al,ac,ar,b):
+    n = len(ac) #Print the rank of A by the number of main diagonal line
+    all, acl, arl, bl = map(np.array, (al, ac, ar, b))# array list
+    d = np.zeros(n)
+    u = np.zeros(n-2)
+    T = np.zeros(n-1)
+    Um = np.zeros(n-1)
+    Up = np.zeros(n-1)
+    y = np.zeros(n)
+    UpT = np.zeros(n)
+    UmT =np.zeros(n)
+    Ty = np.zeros(n)
+    d[0] = acl[0]
+    u[0] = arl[0] / d[0]
+    T[0] = arl[n-1]
+    Um[0] = all[0]/d[0]
+    Up[0] = -all[0]/d[0]
+    y[0] = bl[0]/d[0]
+    UpT[0] = Up[0]*T[0]
+    UmT[0] = Um[0]*T[0]
+    Ty[0] = T[0]*y[0]
+    for i in range(1, n):
+        if i<=(n-4):
+            d[i] = acl[i]-all[i]*u[i-1]
+            u[i] = arl[i]/d[i]
+            if i == 1:
+                T[i] = -T[i-1]-T[i-1]*u[i-1]
+            else:
+                T[i] = -T[i-1]*u[i-1]
+            Um[i] = -Um[i-1]*all[i]/d[i]
+            Up[i] = -Up[i-1]*all[i]/d[i]
+            y[i] = (bl[i]-all[i]*y[i-1])/d[i]
+            UpT[i] = Up[i]*T[i]
+            UmT[i] = Um[i]*T[i]
+            Ty[i] = T[i]*y[i]
+        elif i==(n-3):
+            d[i] = acl[i]-all[i]*u[i-1]
+            Um[i] = (arl[i]-all[i]*Um[i-1])/d[i]
+            Up[i] = -Up[i-1]*all[i]/d[i]
+            T[i] = -T[i-1]*u[i-1]
+            UpT[i] = Up[i]*T[i]
+            UmT[i] = Um[i]*T[i]
+            y[i] = (bl[i]-all[i]*y[i-1])/d[i]
+            Ty[i] = T[i]*y[i]
+        elif i==(n-2):
+            d[i] = acl[i]-all[i]*Um[i-1]
+            Up[i] = (arl[i]-all[i]*Up[i-1])/d[i]
+            #Um[i] = (arl[i]-all[i]*Um[i-1])/d[i]
+            T[i] = all[i+1]-np.sum(UmT)
+            UpT[i] = Up[i]*T[i]
+            y[i] = (bl[i]-all[i]*y[i-1])/d[i]
+            Ty[i] = T[i]*y[i]
+        else:
+            d[i] = acl[i]-np.sum(UpT)
+            y[i]= (bl[i]-np.sum(Ty))/d[i]
+    x = np.zeros(n)
+    for j in range(n-1,-1,-1):
+        if j==(n-1):
+            x[j] = y[j]
+        elif j==(n-2):
+            x[j] = y[j]-Up[j]*x[n-1]
+        elif j==(n-3):
+            x[j] = y[j]-Um[j]*x[j+1]-Up[j]*x[n-1]
+        else:
+            x[j] = y[j]-u[j]*x[j+1]-Um[j]*x[n-2]-Up[j]*x[n-1]
+    return x
+
+#Example
+al = np.array([1.,3.,1.,3.,1.,3.,1.,3.])
+ac = np.array([1.,1.,7.,4.,4.,4.,4.,4.])
+ar = np.array([2.,4.,5.,3.,6.,7.,8.,9.])
+b = np.array([2.,3.,4.,5.,6.,7.,8.,9.])
+print('TDMA:',TDMA(al,ac,ar,b))
+end_TDMA = time.clock()
+print('TDMA running time: %s Seconds'%(end_TDMA-start))
+A = np.array([[1,2,0,0,0,0,1,-1],[3,1,4,0,0,0,0,0],[0,1,7,5,0,0,0,0],[0,0,3,4,3,0,0,0],[0,0,0,1,4,6,0,0,],
+              [0,0,0,0,3,4,7,0],[0,0,0,0,0,1,4,8],[9,-9,0,0,0,0,3,4]],dtype=float)
+print('np.linalg:',np.linalg.solve(A, b))
+end = time.clock()
+print('np.linalg running time: %s Seconds'%(end-end_TDMA))
