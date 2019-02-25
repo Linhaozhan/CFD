@@ -1,0 +1,22 @@
+import numpy as np
+
+#parameter
+nx = 101
+nt = 20
+dx = 1/(nx-1)
+dt = dx*0.8
+#int
+u = np.zeros(nx)
+for i in range(nx):
+    if((i>=29 and i<=69)):
+        u[i] = 1
+
+un = u.copy()
+#calculate
+for n in range(nt):
+    u = un.copy()
+    for i in range(nx-1):
+        un[i] = u[i]-(u[i+1]-u[i])*dt/dx
+    un[0] = un[100]
+
+np.savetxt('ftfs_u',un)
